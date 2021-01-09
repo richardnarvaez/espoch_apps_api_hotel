@@ -1,10 +1,13 @@
 var express = require("express");
 var cors = require("cors");
-var path = require("path");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 
-var crud = require("./routes/crud");
+var clientes = require("./routes/clientes");
+var empleados = require("./routes/empleados");
+var habitaciones = require("./routes/habitaciones");
+var reservas = require("./routes/reservas");
+var alquileres = require("./routes/alquileres");
 
 var app = express();
 
@@ -16,13 +19,17 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(cors());
 
-app.use("/api/v1", crud);
+app.use("/api/v1", clientes);
+app.use("/api/v1", empleados);
+app.use("/api/v1", habitaciones);
+app.use("/api/v1", reservas);
+app.use("/api/v1", alquileres);
 
 app.listen(
   {
     port: PORT,
   },
   () => {
-    console.log(`Apollo Server on http://${HOST}:${PORT}/gql`);
+    console.log(`Server on http://${HOST}:${PORT}`);
   }
 );
