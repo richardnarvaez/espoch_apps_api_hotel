@@ -3,58 +3,116 @@ const { QueryTypes } = require("sequelize");
 const sequelize = require("../connection");
 var router = express.Router({ mergeParams: true });
 
-
 /* ------------------- ALL ------------------ */
 /* ------------------------------------------ */
-router.get("/clientes", async(req, res, next) => {
-    const [results] = await sequelize.query("SELECT * FROM Clientes", {
-        type: QueryTypes.SELECT,
-    });
+router.get("/alquileres", async(req, res, next) => {
+    const [results] = await sequelize.query("SELECT * FROM Alquileres");
     res.json(results);
 });
 
-/* ----------------- FILTER ----------------- */
-/* ------------------------------------------ */
-// http://localhost:4000/api/v1/clientes/filter?cedula=09090
-router.get("/clientes/filter?", async(req, res, next) => {
-    const { cedula } = req.query;
-    const [
-        results,
-    ] = await sequelize.query(
-        "SELECT * FROM Clientes WHERE  cedula_cli Like '" + cedula + "%';", { type: QueryTypes.SELECT }
-    );
-    res.json(results);
-});
-
-/* ----------------- INSERT ----------------- */
-/* ------------------------------------------ */
-
-router.post("/cliente", async(req, res, next) => {
+//Post para insertar un alquiler
+router.post("/alquilar", async(req, res, next) => {
     let {
-        cedula_cli,
-        nombre_cli,
-        apellido_cli,
-        direccion_cli,
-        telefono_cli,
+        cedula_cliA,
+        codigo_habA,
+        cedula_empA,
+        fechaIng_alq,
+        fechaSal_alq,
+        numDias_alq,
+        temp_alq,
+        prcTotal_alq,
+        estado_alq,
     } = req.body;
 
-    console.log("NOMBRE: " + nombre_cli);
-    const sqlQuery = `INSERT INTO Clientes 
-        VALUES('${cedula_cli}','${nombre_cli}',
-        '${apellido_cli}','${direccion_cli}','${telefono_cli}')`;
+    console.log("Datos: ", req.body);
+
+    const sqlQueryInsert =
+        "EXEC pr_InsertarAlquiler '" + cedula_cliA + "','" + codigo_habA + "','" + cedula_empA + "','" +
+        fechaIng_alq + "','" + fechaSal_alq + "'," + numDias_alq + ",'" + temp_alq + "'," + prcTotal_alq + "";
 
     sequelize
-        .query(sqlQuery, { type: QueryTypes.INSERT })
+        .query(sqlQueryInsert, QueryTypes.INSERT)
         .then((data) => {
-            console.log("Response: ", data);
+            console.log(data);
+            const [result, type] = data;
+            console.log("Response: ", result, type);
             res.json({
                 success: true,
-                msg: "Cliente Registrado Correctamente",
+                msg: "Información Guardada Exitosamente",
             });
+            sequelize
+                .query(sqlQueryUpdate)
+                .then((i) => {
+                    console.log(i);
+                    const [result, type] = i;
+                })
+                .catch((e) => {
+                    res.json({
+                        success: false,
+                        msg: "Error En Modificar El Estado De La Habitación",
+                    });
+                });
         })
         .catch((e) => {
-            res.json({ success: false, msg: "Error: El cliente ya existe" });
+            res.json({
+                success: false,
+                msg: "Error En Alquilar La Habitación:\n" + e,
+            });
         });
 });
 
+//Metodo para entregar o finalizar un alquiler
+router.put("/alquiler/checkoutalq", async(req, res, next) => {
+    const { id_alquiler, codigo_habA } = req.body;
+    console.log("BODY: ", req.body);
+    sequelize
+        .query(
+            "EXECUTE pr_EntregarAlquiler " + id_alquiler + ", '" + codigo_habA + "'"
+        )
+        .then((data) => {
+            console.log(data);
+            res.json({
+                success: true,
+                msg: "Check Out Correcto",
+            });
+        })
+        .catch((e) => {
+            res.json({
+                success: false,
+                msg: "Problemas En Dar El Check Out De La Habitación",
+            });
+        });
+});
+
+//Metodo para actualizar la fecha de salida de un alquiler
+router.put("/alquiler/updatealq", async(req, res, next) => {
+    const { id_alquiler, fechaSal_alq, prcTotal_alq, numDias_alq } = req.body;
+    console.log("BODY: ", req.body);
+    sequelize
+        .query(
+            "EXECUTE pr_ModificarAlquiler " + id_alquiler + ", '" + fechaSal_alq + "', " + prcTotal_alq + ", " + numDias_alq + " "
+        )
+        .then((data) => {
+            console.log(data);
+            res.json({
+                success: true,
+                msg: "El Alquiler Se Ha Modificado",
+            });
+        })
+        .catch((e) => {
+            res.json({
+                success: false,
+                msg: "Problemas En Actualizar Alquiler",
+            });
+        });
+});
+
+//Metodo para extraer los datos del alquiler 
+router.get("/alquiler/ver?", async(req, res, next) => {
+    const { id } = req.query;
+    const [results] = await sequelize.query(
+        "EXECUTE pr_DatosCheckOut   '" + id + "';"
+    );
+    res.json(results);
+});
 module.exports = router;
